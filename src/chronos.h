@@ -50,7 +50,7 @@ extern int chronos_debug_level;
     fprintf(stderr,"\n");					     \
   } while(0)
 
-#define client_info(...) \
+#define chronos_info(...) \
   chronos_msg("INFO", __VA_ARGS__)
 
 #define chronos_error(...) \

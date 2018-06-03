@@ -418,7 +418,7 @@ chronosCacheAlloc(const char *homedir,
   cacheP->numUsers = CHRONOS_CLIENT_NUM_USERS;
   for (i=0; i<CHRONOS_CLIENT_NUM_USERS; i++) {
     snprintf(cacheP->users[i], sizeof(cacheP->users[i]),
-             "%d", i);
+             "%d", i + 1);
   }
 
   goto cleanup;

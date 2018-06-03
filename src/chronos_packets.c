@@ -45,6 +45,9 @@ chronosPackPurchase(const char *accountId,
   purchaseInfoP->price = price;
   purchaseInfoP->amount = amount;
 
+  chronos_info("Packed: [%s, %d, %s, %.2f, %d]",
+               purchaseInfoP->accountId, purchaseInfoP->symbolId, purchaseInfoP->symbol,
+               purchaseInfoP->price, purchaseInfoP->amount);
   goto cleanup;
 
 failXit:
