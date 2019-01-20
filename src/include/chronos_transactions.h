@@ -34,6 +34,11 @@ typedef struct chronosPurchaseInfo_t {
   int amount;
 } chronosPurchaseInfo_t;
 
+typedef struct chronosUpdateStockInfo_t {
+  char symbol[ID_SZ];
+  float price;
+} chronosUpdateStockInfo_t;
+
 
 
 /*---------------------------------
@@ -46,15 +51,18 @@ typedef enum chronosUserTransaction_t {
   CHRONOS_USER_TXN_PURCHASE,
   CHRONOS_USER_TXN_SALE,
   CHRONOS_USER_TXN_MAX,
+  CHRONOS_SYS_TXN_UPDATE_STOCK=CHRONOS_USER_TXN_MAX,
   CHRONOS_USER_TXN_INVAL=CHRONOS_USER_TXN_MAX
 } chronosUserTransaction_t;
 
+#if 0
 typedef enum chronosSystemTransaction_t {
   CHRONOS_SYS_TXN_MIN = 0,
   CHRONOS_SYS_TXN_UPDATE_STOCK = CHRONOS_SYS_TXN_MIN,
   CHRONOS_SYS_TXN_MAX,
   CHRONOS_SYS_TXN_INVAL=CHRONOS_SYS_TXN_MAX
 } chronosSystemTransaction_t;
+#endif
 
 extern const char *chronos_user_transaction_str[];
 extern const char *chronos_system_transaction_str[];

@@ -22,6 +22,7 @@ typedef struct chronosRequestPacket_t {
     chronosSymbol_t            symbolInfo[CHRONOS_REQUEST_PACKET_SIZE];
     chronosPurchaseInfo_t      purchaseInfo[CHRONOS_REQUEST_PACKET_SIZE];
     chronosSellInfo_t          sellInfo[CHRONOS_REQUEST_PACKET_SIZE];
+    chronosUpdateStockInfo_t   updateInfo[CHRONOS_REQUEST_PACKET_SIZE];
   } request_data;
 
 } chronosRequestPacket_t;

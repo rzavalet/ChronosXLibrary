@@ -19,6 +19,37 @@ const char *chronos_system_transaction_str[] = {
 };
 
 static int
+chronosPackUpdateStock(const char                 *symbol, 
+                       float                       price,
+                       chronosUpdateStockInfo_t   *updateStockInfoP)
+{
+  int rc = CHRONOS_SUCCESS;
+
+  if (updateStockInfoP == NULL) {
+    chronos_error("Invalid argument");
+    goto failXit;
+  }
+
+  if (symbol == NULL) {
+    chronos_error("NULL symbol provided");
+    goto failXit;
+  }
+
+  strncpy(updateStockInfoP->symbol, symbol, sizeof(updateStockInfoP->symbol));
+  updateStockInfoP->price = price;
+
+  chronos_info("Packed: [%s, %.2f]", updateStockInfoP->symbol, updateStockInfoP->price);
+
+  goto cleanup;
+
+failXit:
+  rc = CHRONOS_FAIL;
+
+cleanup:
+  return rc;
+}
+
+static int
 chronosPackPurchase(const char *accountId,
                     int          symbolId, 
                     const char *symbol, 
@@ -152,7 +183,7 @@ chronosRequestCreate(chronosUserTransaction_t txnType,
 #if 0
   int random_num_data_items = CHRONOS_MIN_DATA_ITEMS_PER_XACT + rand() % (1 + CHRONOS_MAX_DATA_ITEMS_PER_XACT - CHRONOS_MIN_DATA_ITEMS_PER_XACT);
 #endif
-  int random_num_data_items = 3;
+  int random_num_data_items = 50;
   int rc = CHRONOS_SUCCESS;
   int random_user_idx = 0;
   int random_symbol_idx = 0;
@@ -236,7 +267,8 @@ chronosRequestCreate(chronosUserTransaction_t txnType,
 
         random_amount = rand() % 100;
         // Allow a high price
-        random_price = chronosClientCacheSymbolPriceFromUserGet(random_user_idx, random_symbol_idx, clientCacheH) + 10;
+        //random_price = chronosClientCacheSymbolPriceFromUserGet(random_user_idx, random_symbol_idx, clientCacheH) + 10;
+        random_price = 2000;
 
         rc = chronosPackPurchase(user,
                                  random_symbol, symbol,
@@ -266,7 +298,8 @@ chronosRequestCreate(chronosUserTransaction_t txnType,
 
         random_amount = rand() % 100;
         // Allow a low price
-        random_price = chronosClientCacheSymbolPriceFromUserGet(random_user_idx, random_symbol_idx, clientCacheH) - 10;
+        //random_price = chronosClientCacheSymbolPriceFromUserGet(random_user_idx, random_symbol_idx, clientCacheH) - 10;
+        random_price = 0;
 
         rc = chronosPackSellStock(user,
                                   random_symbol, symbol,
@@ -274,6 +307,25 @@ chronosRequestCreate(chronosUserTransaction_t txnType,
                                   &(reqPacketP->request_data.sellInfo[i]));
         if (rc != CHRONOS_SUCCESS) {
           chronos_error("Could not pack sell request");
+          goto failXit;
+        }
+      }
+      break;
+
+    case CHRONOS_SYS_TXN_UPDATE_STOCK:
+      for (i=0; i<random_num_data_items; i++) {
+        // Choose a random symbol
+        random_symbol = rand() % chronosCacheNumSymbolsGet(chronosCacheH);
+
+        // Now get the symbol
+        symbol = chronosCacheSymbolGet(random_symbol, chronosCacheH);
+        random_price = 1000;
+
+        rc = chronosPackUpdateStock(symbol, random_price, 
+                                    &(reqPacketP->request_data.updateInfo[i]));
+
+        if (rc != CHRONOS_SUCCESS) {
+          chronos_error("Could not pack update request");
           goto failXit;
         }
       }

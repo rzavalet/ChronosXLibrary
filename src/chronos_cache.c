@@ -39,8 +39,13 @@ typedef struct chronosClientPortfolios_t
   chronosClientStockInfo_t  stockInfoArr[100];
 } chronosClientPortfolios_t;
 
+#define CHRONOS_CLIENT_CACHE_MAGIC   (0xDEAD)
+#define CHRONOS_CLIENT_CACHE_MAGIC_CHECK(cacheP)    assert((cacheP)->magic == CHRONOS_CLIENT_CACHE_MAGIC)
+#define CHRONOS_CLIENT_CACHE_MAGIC_SET(cacheP)      (cacheP)->magic = CHRONOS_CLIENT_CACHE_MAGIC
+
 typedef struct chronosClientCache_t 
 {
+  int                     magic;
   int                     numPortfolios;
 
   /*List of portfolios handled by this client thread:
@@ -49,7 +54,11 @@ typedef struct chronosClientCache_t
   chronosClientPortfolios_t portfoliosArr[100];
 } chronosClientCache_t;
 
+#define CHRONOS_CACHE_MAGIC   (0xBEEF)
+#define CHRONOS_CACHE_MAGIC_CHECK(cacheP)    assert((cacheP)->magic == CHRONOS_CACHE_MAGIC)
+#define CHRONOS_CACHE_MAGIC_SET(cacheP)      (cacheP)->magic = CHRONOS_CACHE_MAGIC
 typedef struct chronosCache_t {
+  int                 magic;
   int                 numStocks;
   char                **stocksListP;
 
@@ -72,6 +81,8 @@ chronosCacheNumSymbolsGet(CHRONOS_CACHE_H chronosCacheH)
   }
 
   cacheP = (chronosCache_t *) chronosCacheH;
+  CHRONOS_CACHE_MAGIC_CHECK(cacheP);
+
   return cacheP->numStocks;
 }
 
@@ -87,6 +98,7 @@ chronosCacheSymbolGet(int symbolNum,
   }
 
   cacheP = (chronosCache_t *) chronosCacheH;
+  CHRONOS_CACHE_MAGIC_CHECK(cacheP);
 
   if (symbolNum < 0 || symbolNum > cacheP->numStocks) {
     return NULL;
@@ -105,6 +117,8 @@ chronosCacheNumUsersGet(CHRONOS_CACHE_H chronosCacheH)
   }
 
   cacheP = (chronosCache_t *) chronosCacheH;
+  CHRONOS_CACHE_MAGIC_CHECK(cacheP);
+
   return cacheP->numUsers;
 }
 
@@ -120,6 +134,7 @@ chronosCacheUserGet(int userNum,
   }
 
   cacheP = (chronosCache_t *) chronosCacheH;
+  CHRONOS_CACHE_MAGIC_CHECK(cacheP);
 
   if (userNum < 0 || userNum > cacheP->numUsers) {
     return NULL;
@@ -218,6 +233,8 @@ chronosClientCacheAlloc(int numClient, int numClients, CHRONOS_CACHE_H chronosCa
     goto failXit;
   }
 
+  CHRONOS_CLIENT_CACHE_MAGIC_SET(clientCacheP);
+
   goto cleanup;
 
 failXit:
@@ -242,6 +259,8 @@ chronosClientCacheFree(CHRONOS_CLIENT_CACHE_H chronosClientCacheH)
   }
 
   cacheP = (chronosClientCache_t *) chronosClientCacheH;
+  CHRONOS_CLIENT_CACHE_MAGIC_CHECK(cacheP);
+
   memset(cacheP, 0, sizeof(*cacheP));
 
   goto cleanup;
@@ -263,6 +282,8 @@ chronosClientCacheNumPortfoliosGet(CHRONOS_CLIENT_CACHE_H clientCacheH)
   }
 
   clientCacheP = (chronosClientCache_t *) clientCacheH;
+  CHRONOS_CLIENT_CACHE_MAGIC_CHECK(clientCacheP);
+
   return clientCacheP->numPortfolios;
 }
 
@@ -276,6 +297,7 @@ chronosClientCacheUserIdGet(int numUser, CHRONOS_CLIENT_CACHE_H clientCacheH)
   }
 
   clientCacheP = (chronosClientCache_t *) clientCacheH;
+  CHRONOS_CLIENT_CACHE_MAGIC_CHECK(clientCacheP);
   assert(0 <= numUser && numUser < clientCacheP->numPortfolios);
 
   return clientCacheP->portfoliosArr[numUser].userId;
@@ -291,6 +313,7 @@ chronosClientCacheUserGet(int numUser, CHRONOS_CLIENT_CACHE_H clientCacheH)
   }
 
   clientCacheP = (chronosClientCache_t *) clientCacheH;
+  CHRONOS_CLIENT_CACHE_MAGIC_CHECK(clientCacheP);
   assert(0 <= numUser && numUser < clientCacheP->numPortfolios);
 
   return clientCacheP->portfoliosArr[numUser].user;
@@ -306,6 +329,7 @@ chronosClientCacheNumSymbolFromUserGet(int numUser, CHRONOS_CLIENT_CACHE_H clien
   }
 
   clientCacheP = (chronosClientCache_t *) clientCacheH;
+  CHRONOS_CLIENT_CACHE_MAGIC_CHECK(clientCacheP);
   assert(0 <= numUser && numUser < clientCacheP->numPortfolios);
 
   return clientCacheP->portfoliosArr[numUser].numSymbols;
@@ -321,6 +345,7 @@ chronosClientCacheSymbolIdFromUserGet(int numUser, int numSymbol, CHRONOS_CLIENT
   }
 
   clientCacheP = (chronosClientCache_t *) clientCacheH;
+  CHRONOS_CLIENT_CACHE_MAGIC_CHECK(clientCacheP);
   assert(0 <= numUser && numUser < clientCacheP->numPortfolios);
   assert(0 <= numSymbol && numSymbol < clientCacheP->portfoliosArr[numUser].numSymbols);
 
@@ -337,6 +362,7 @@ chronosClientCacheSymbolFromUserGet(int numUser, int numSymbol, CHRONOS_CLIENT_C
   }
 
   clientCacheP = (chronosClientCache_t *) clientCacheH;
+  CHRONOS_CLIENT_CACHE_MAGIC_CHECK(clientCacheP);
   assert(0 <= numUser && numUser < clientCacheP->numPortfolios);
   assert(0 <= numSymbol && numSymbol < clientCacheP->portfoliosArr[numUser].numSymbols);
 
@@ -353,6 +379,7 @@ chronosClientCacheSymbolPriceFromUserGet(int numUser, int numSymbol, CHRONOS_CLI
   }
 
   clientCacheP = (chronosClientCache_t *) clientCacheH;
+  CHRONOS_CLIENT_CACHE_MAGIC_CHECK(clientCacheP);
   assert(0 <= numUser && numUser < clientCacheP->numPortfolios);
   assert(0 <= numSymbol && numSymbol < clientCacheP->portfoliosArr[numUser].numSymbols);
 
@@ -413,6 +440,8 @@ chronosCacheAlloc(const char *homedir,
     goto failXit;
   }
 
+  assert(cacheP->stocksListP != NULL);
+
   cacheP->numStocks = CHRONOS_CLIENT_NUM_STOCKS;
 
   cacheP->numUsers = CHRONOS_CLIENT_NUM_USERS;
@@ -420,6 +449,8 @@ chronosCacheAlloc(const char *homedir,
     snprintf(cacheP->users[i], sizeof(cacheP->users[i]),
              "%d", i + 1);
   }
+
+  CHRONOS_CACHE_MAGIC_SET(cacheP);
 
   goto cleanup;
 
@@ -445,6 +476,7 @@ chronosCacheFree(CHRONOS_CACHE_H chronosCacheH)
   }
 
   cacheP = (chronosCache_t *) chronosCacheH;
+  CHRONOS_CACHE_MAGIC_CHECK(cacheP);
 
   rc = stockListFree(cacheP);
   if (rc != CHRONOS_SUCCESS) {
