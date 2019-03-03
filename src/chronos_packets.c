@@ -175,15 +175,13 @@ cleanup:
 }
 
 CHRONOS_REQUEST_H
-chronosRequestCreate(chronosUserTransaction_t txnType, 
+chronosRequestCreate(unsigned int num_data_items,
+                     chronosUserTransaction_t txnType, 
                      CHRONOS_CLIENT_CACHE_H  clientCacheH,
                      CHRONOS_ENV_H envH)
 {
   int i;
-#if 0
   int random_num_data_items = CHRONOS_MIN_DATA_ITEMS_PER_XACT + rand() % (1 + CHRONOS_MAX_DATA_ITEMS_PER_XACT - CHRONOS_MIN_DATA_ITEMS_PER_XACT);
-#endif
-  int random_num_data_items = 50;
   int rc = CHRONOS_SUCCESS;
   int random_user_idx = 0;
   int random_symbol_idx = 0;
@@ -206,6 +204,10 @@ chronosRequestCreate(chronosUserTransaction_t txnType,
     goto failXit;
   }
 
+  if (num_data_items > 0) {
+    random_num_data_items = num_data_items;
+  }
+
   reqPacketP = malloc(sizeof(chronosRequestPacket_t));
   if (reqPacketP == NULL) {
     chronos_error("Could not allocate request structure");
@@ -213,6 +215,7 @@ chronosRequestCreate(chronosUserTransaction_t txnType,
   }
 
   memset(reqPacketP, 0, sizeof(*reqPacketP));
+  CHRONOS_REQUEST_MAGIC_SET(reqPacketP);
   reqPacketP->txn_type = txnType;
   reqPacketP->numItems = random_num_data_items;
 

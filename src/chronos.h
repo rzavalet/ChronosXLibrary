@@ -13,6 +13,8 @@
 #define CHRONOS_SUCCESS         0
 #define CHRONOS_FAIL            1
 
+#define CHRONOS_MIN_DATA_ITEMS_PER_XACT   50
+#define CHRONOS_MAX_DATA_ITEMS_PER_XACT   100
 
 
 /*---------------------------------

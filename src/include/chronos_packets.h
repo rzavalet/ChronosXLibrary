@@ -13,6 +13,8 @@ typedef struct chronosResponsePacket_t {
 } chronosResponsePacket_t;
 
 typedef struct chronosRequestPacket_t {
+  int magic;
+
   chronosUserTransaction_t txn_type;
 
   /* A transaction can affect up to 100 symbols */
@@ -27,11 +29,16 @@ typedef struct chronosRequestPacket_t {
 
 } chronosRequestPacket_t;
 
+#define CHRONOS_REQUEST_MAGIC                    (0xDEAF)
+#define CHRONOS_REQUEST_MAGIC_CHECK(requestP)    assert((requestP)->magic == CHRONOS_REQUEST_MAGIC)
+#define CHRONOS_REQUEST_MAGIC_SET(requestP)      (requestP)->magic = CHRONOS_REQUEST_MAGIC
+
 typedef void *CHRONOS_REQUEST_H;
 typedef void *CHRONOS_RESPONSE_H;
 
 CHRONOS_REQUEST_H
-chronosRequestCreate(chronosUserTransaction_t txnType, 
+chronosRequestCreate(unsigned int num_data_items,
+                     chronosUserTransaction_t txnType, 
                      CHRONOS_CLIENT_CACHE_H  clientCacheH,
                      CHRONOS_CACHE_H chronosCacheH);
 
