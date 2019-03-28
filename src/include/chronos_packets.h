@@ -3,6 +3,7 @@
 
 #include "chronos_transactions.h"
 #include "chronos_cache.h"
+#include "chronos_environment.h"
 #include <stdlib.h>
 
 #define CHRONOS_REQUEST_PACKET_SIZE (100)
@@ -40,7 +41,12 @@ CHRONOS_REQUEST_H
 chronosRequestCreate(unsigned int num_data_items,
                      chronosUserTransaction_t txnType, 
                      CHRONOS_CLIENT_CACHE_H  clientCacheH,
-                     CHRONOS_CACHE_H chronosCacheH);
+                     CHRONOS_ENV_H envH);
+
+CHRONOS_REQUEST_H
+chronosRequestCreateForClient(int user_idx,
+                              CHRONOS_CLIENT_CACHE_H  clientCacheH,
+                              CHRONOS_ENV_H envH);
 
 int
 chronosRequestFree(CHRONOS_REQUEST_H requestH);

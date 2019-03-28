@@ -38,7 +38,9 @@ chronosPackUpdateStock(const char                 *symbol,
   strncpy(updateStockInfoP->symbol, symbol, sizeof(updateStockInfoP->symbol));
   updateStockInfoP->price = price;
 
-  chronos_info("Packed: [%s, %.2f]", updateStockInfoP->symbol, updateStockInfoP->price);
+  chronos_debug(CHRONOS_DEBUG_LEVEL_MAX, 
+                "Packed: [%s, %.2f]", 
+                updateStockInfoP->symbol, updateStockInfoP->price);
 
   goto cleanup;
 
@@ -76,7 +78,8 @@ chronosPackPurchase(const char *accountId,
   purchaseInfoP->price = price;
   purchaseInfoP->amount = amount;
 
-  chronos_info("Packed: [%s, %d, %s, %.2f, %d]",
+  chronos_debug(CHRONOS_DEBUG_LEVEL_MAX,
+               "Packed: [%s, %d, %s, %.2f, %d]",
                purchaseInfoP->accountId, purchaseInfoP->symbolId, purchaseInfoP->symbol,
                purchaseInfoP->price, purchaseInfoP->amount);
   goto cleanup;
@@ -175,6 +178,84 @@ cleanup:
 }
 
 CHRONOS_REQUEST_H
+chronosRequestCreateForClient(int user_idx,
+                              CHRONOS_CLIENT_CACHE_H  clientCacheH,
+                              CHRONOS_ENV_H envH)
+{
+  int i;
+  int rc = CHRONOS_SUCCESS;
+  int num_data_items = 0;
+  int random_user_idx = 0;
+  int random_symbol_idx = 0;
+  int random_symbol;
+  int random_amount;
+  float random_price;
+  const char *symbol;
+  const char *user;
+  chronosRequestPacket_t *reqPacketP = NULL;
+  CHRONOS_CACHE_H chronosCacheH = NULL;
+
+  if (envH == NULL || clientCacheH == NULL) {
+    chronos_error("Invalid argument");
+    goto failXit;
+  }
+
+  chronosCacheH = chronosEnvCacheGet(envH);
+  if (chronosCacheH == NULL) {
+    chronos_error("Invalid cache handle");
+    goto failXit;
+  }
+
+  reqPacketP = malloc(sizeof(chronosRequestPacket_t));
+  if (reqPacketP == NULL) {
+    chronos_error("Could not allocate request structure");
+    goto failXit;
+  }
+
+  memset(reqPacketP, 0, sizeof(*reqPacketP));
+  CHRONOS_REQUEST_MAGIC_SET(reqPacketP);
+
+  // Get user details
+  user = chronosClientCacheUserGet(user_idx, clientCacheH);
+  num_data_items = chronosClientCacheNumSymbolFromUserGet(user_idx, clientCacheH);
+
+  reqPacketP->txn_type = CHRONOS_USER_TXN_PURCHASE;
+  reqPacketP->numItems = (num_data_items > CHRONOS_MAX_DATA_ITEMS_PER_XACT ? CHRONOS_MAX_DATA_ITEMS_PER_XACT : num_data_items);
+
+  for (i=0; i<num_data_items; i++) {
+
+    // Now get the symbol
+    random_symbol = chronosClientCacheSymbolIdFromUserGet(user_idx, i, clientCacheH);
+    symbol = chronosClientCacheSymbolFromUserGet(user_idx, i, clientCacheH);
+
+    random_amount = 100;
+    // Allow a high price
+    //random_price = chronosClientCacheSymbolPriceFromUserGet(random_user_idx, random_symbol_idx, clientCacheH) + 10;
+    random_price = 2000;
+
+    rc = chronosPackPurchase(user,
+                             random_symbol, symbol,
+                             random_price, random_amount,
+                             &(reqPacketP->request_data.purchaseInfo[i]));
+    if (rc != CHRONOS_SUCCESS) {
+      chronos_error("Could not pack purchase request");
+      goto failXit;
+    }
+  }
+
+  goto cleanup;
+
+failXit:
+  if (reqPacketP != NULL) {
+    free(reqPacketP);
+    reqPacketP = NULL;
+  }
+
+cleanup:
+  return (void *) reqPacketP;
+}
+
+CHRONOS_REQUEST_H
 chronosRequestCreate(unsigned int num_data_items,
                      chronosUserTransaction_t txnType, 
                      CHRONOS_CLIENT_CACHE_H  clientCacheH,
@@ -206,6 +287,10 @@ chronosRequestCreate(unsigned int num_data_items,
 
   if (num_data_items > 0) {
     random_num_data_items = num_data_items;
+  }
+
+  if (random_num_data_items > CHRONOS_MAX_DATA_ITEMS_PER_XACT) {
+    random_num_data_items = CHRONOS_MAX_DATA_ITEMS_PER_XACT;
   }
 
   reqPacketP = malloc(sizeof(chronosRequestPacket_t));
@@ -268,7 +353,7 @@ chronosRequestCreate(unsigned int num_data_items,
         random_symbol = chronosClientCacheSymbolIdFromUserGet(random_user_idx, random_symbol_idx, clientCacheH);
         symbol = chronosClientCacheSymbolFromUserGet(random_user_idx, random_symbol_idx, clientCacheH);
 
-        random_amount = rand() % 100;
+        random_amount = 10;
         // Allow a high price
         //random_price = chronosClientCacheSymbolPriceFromUserGet(random_user_idx, random_symbol_idx, clientCacheH) + 10;
         random_price = 2000;
@@ -299,7 +384,7 @@ chronosRequestCreate(unsigned int num_data_items,
         random_symbol = chronosClientCacheSymbolIdFromUserGet(random_user_idx, random_symbol_idx, clientCacheH);
         symbol = chronosClientCacheSymbolFromUserGet(random_user_idx, random_symbol_idx, clientCacheH);
 
-        random_amount = rand() % 100;
+        random_amount = 5;
         // Allow a low price
         //random_price = chronosClientCacheSymbolPriceFromUserGet(random_user_idx, random_symbol_idx, clientCacheH) - 10;
         random_price = 0;

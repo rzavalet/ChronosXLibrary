@@ -386,7 +386,7 @@ chronosClientReceiveResponse(int *txn_rc_ret,
       goto failXit;
     }
     else if (rc == 0) {
-      chronos_error("poll() timed out");
+      chronos_debug(1, "poll() timed out");
       continue;
     }
 
