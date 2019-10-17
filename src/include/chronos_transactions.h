@@ -4,6 +4,7 @@
 #define   ID_SZ           10
 
 typedef struct chronosSymbol_t {
+  int  symbolIdx;
   int  symbolId;
   char symbol[ID_SZ];
 } chronosSymbol_t;
@@ -35,6 +36,7 @@ typedef struct chronosPurchaseInfo_t {
 } chronosPurchaseInfo_t;
 
 typedef struct chronosUpdateStockInfo_t {
+  int  symbolIdx;
   char symbol[ID_SZ];
   float price;
 } chronosUpdateStockInfo_t;
@@ -52,7 +54,7 @@ typedef enum chronosUserTransaction_t {
   CHRONOS_USER_TXN_SALE,
   CHRONOS_USER_TXN_MAX,
   CHRONOS_SYS_TXN_UPDATE_STOCK=CHRONOS_USER_TXN_MAX,
-  CHRONOS_USER_TXN_INVAL=CHRONOS_USER_TXN_MAX
+  CHRONOS_USER_TXN_INVAL=CHRONOS_USER_TXN_MAX,
 } chronosUserTransaction_t;
 
 #if 0

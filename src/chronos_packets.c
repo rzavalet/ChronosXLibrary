@@ -19,7 +19,8 @@ const char *chronos_system_transaction_str[] = {
 };
 
 static int
-chronosPackUpdateStock(const char                 *symbol, 
+chronosPackUpdateStock(int                         symbolId,
+                       const char                 *symbol, 
                        float                       price,
                        chronosUpdateStockInfo_t   *updateStockInfoP)
 {
@@ -35,12 +36,13 @@ chronosPackUpdateStock(const char                 *symbol,
     goto failXit;
   }
 
+  updateStockInfoP->symbolIdx = symbolId;
   strncpy(updateStockInfoP->symbol, symbol, sizeof(updateStockInfoP->symbol));
   updateStockInfoP->price = price;
 
   chronos_debug(CHRONOS_DEBUG_LEVEL_MAX, 
-                "Packed: [%s, %.2f]", 
-                updateStockInfoP->symbol, updateStockInfoP->price);
+                "Packed: [%d, %s, %.2f]", 
+                updateStockInfoP->symbolIdx, updateStockInfoP->symbol, updateStockInfoP->price);
 
   goto cleanup;
 
@@ -163,6 +165,7 @@ chronosPackViewStock(int symbolId,
     goto failXit;
   }
 
+  symbolInfoP->symbolIdx = symbolId;
   symbolInfoP->symbolId = symbolId;
   strncpy(symbolInfoP->symbol, 
           symbol,
@@ -401,15 +404,18 @@ chronosRequestCreate(unsigned int num_data_items,
       break;
 
     case CHRONOS_SYS_TXN_UPDATE_STOCK:
+      random_symbol = rand() % chronosCacheNumSymbolsGet(chronosCacheH);
+
+      int j = random_symbol;
       for (i=0; i<random_num_data_items; i++) {
         // Choose a random symbol
-        random_symbol = rand() % chronosCacheNumSymbolsGet(chronosCacheH);
+        //j = (i+random_symbol) % chronosCacheNumSymbolsGet(chronosCacheH);
 
         // Now get the symbol
-        symbol = chronosCacheSymbolGet(random_symbol, chronosCacheH);
+        symbol = chronosCacheSymbolGet(i, chronosCacheH);
         random_price = 1000;
 
-        rc = chronosPackUpdateStock(symbol, random_price, 
+        rc = chronosPackUpdateStock(i, symbol, random_price, 
                                     &(reqPacketP->request_data.updateInfo[i]));
 
         if (rc != CHRONOS_SUCCESS) {
