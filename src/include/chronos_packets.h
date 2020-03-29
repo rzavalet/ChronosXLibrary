@@ -38,10 +38,16 @@ typedef void *CHRONOS_REQUEST_H;
 typedef void *CHRONOS_RESPONSE_H;
 
 CHRONOS_REQUEST_H
-chronosRequestCreate(unsigned int num_data_items,
+chronosRequestUpdateFromListCreate(unsigned int             num_data_items,
+                                   int                     *data_items_array,
+                                   CHRONOS_CLIENT_CACHE_H   clientCacheH,
+                                   CHRONOS_ENV_H            envH);
+
+CHRONOS_REQUEST_H
+chronosRequestCreate(unsigned int             num_data_items,
                      chronosUserTransaction_t txnType, 
-                     CHRONOS_CLIENT_CACHE_H  clientCacheH,
-                     CHRONOS_ENV_H envH);
+                     CHRONOS_CLIENT_CACHE_H   clientCacheH,
+                     CHRONOS_ENV_H            envH);
 
 CHRONOS_REQUEST_H
 chronosRequestCreateForClient(int user_idx,

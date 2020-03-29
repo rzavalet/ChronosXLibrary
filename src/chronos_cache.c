@@ -8,23 +8,24 @@
 
 #define CHRONOS_CLIENT_NUM_STOCKS     (300)
 #define CHRONOS_CLIENT_NUM_USERS      (50)
+
 #define MAXLINE   1024
 
-/*
+/*--------------------------------------------------
  * Information for each symbol a user is interested in.
- */
+ *------------------------------------------------*/
 typedef struct chronosClientStockInfo_t
 {
-  int     symbolId;
+  int            symbolId;
   const char    *symbol;
-  int     random_amount;
-  float   random_price;
+  int            random_amount;
+  float          random_price;
 } chronosClientStockInfo_t;
 
-/*
+/*--------------------------------------------------
  * A user's portfolio information.
  * A user is interested in k stock symbols.
- */
+ *------------------------------------------------*/
 typedef struct chronosClientPortfolios_t 
 {
   int         userId;
@@ -36,13 +37,19 @@ typedef struct chronosClientPortfolios_t
   int   numSymbols;
 
   /* Information for each of the k stocks managed by a user */
-  chronosClientStockInfo_t  stockInfoArr[100];
+  chronosClientStockInfo_t  stockInfoArr[CHRONOS_CLIENT_MAX_SYMBOLS_PER_PORTFOLIO];
 } chronosClientPortfolios_t;
 
 #define CHRONOS_CLIENT_CACHE_MAGIC   (0xDEAD)
 #define CHRONOS_CLIENT_CACHE_MAGIC_CHECK(cacheP)    assert((cacheP)->magic == CHRONOS_CLIENT_CACHE_MAGIC)
 #define CHRONOS_CLIENT_CACHE_MAGIC_SET(cacheP)      (cacheP)->magic = CHRONOS_CLIENT_CACHE_MAGIC
 
+
+/*--------------------------------------------------
+ * A client cache contains a number of portfolios and
+ * each portfolio contains stock information about a 
+ * number of stocks.
+ *------------------------------------------------*/
 typedef struct chronosClientCache_t 
 {
   int                     magic;
@@ -51,14 +58,21 @@ typedef struct chronosClientCache_t
   /*List of portfolios handled by this client thread:
    * we have one entry in the array per each managed user
    */
-  chronosClientPortfolios_t portfoliosArr[100];
+  chronosClientPortfolios_t portfoliosArr[CHRONOS_CLIENT_MAX_PORTFOLIOS_PER_CLIENT];
 } chronosClientCache_t;
 
 #define CHRONOS_CACHE_MAGIC   (0xBEEF)
 #define CHRONOS_CACHE_MAGIC_CHECK(cacheP)    assert((cacheP)->magic == CHRONOS_CACHE_MAGIC)
 #define CHRONOS_CACHE_MAGIC_SET(cacheP)      (cacheP)->magic = CHRONOS_CACHE_MAGIC
+
+
+/*--------------------------------------------------
+ * A cache of the symbols and users
+ * managed by the system.
+ *------------------------------------------------*/
 typedef struct chronosCache_t {
   int                 magic;
+
   int                 numStocks;
   char                **stocksListP;
 
@@ -86,8 +100,12 @@ chronosCacheNumSymbolsGet(CHRONOS_CACHE_H chronosCacheH)
   return cacheP->numStocks;
 }
 
+/*-------------------------------------------
+ * Get the symbol name at index symbolNum
+ * from the chronos cache.
+ *-----------------------------------------*/
 const char *
-chronosCacheSymbolGet(int symbolNum,
+chronosCacheSymbolGet(int             symbolNum,
                       CHRONOS_CACHE_H chronosCacheH)
 {
   chronosCache_t *cacheP= NULL;
@@ -143,20 +161,24 @@ chronosCacheUserGet(int userNum,
   return cacheP->users[userNum];
 }
 
-/* This client process will handle n users.
- * So, for each user, we need to create its portfolio.
- */
+/*------------------------------------------------------------
+ * This function creates a number of portfolios under the
+ * provided clientCache structure. 
+ *----------------------------------------------------------*/
 static int
-createPortfolios(int numClient, int numClients, chronosClientCache_t *clientCacheP, CHRONOS_CACHE_H chronosCacheH)
+createPortfolios(int                   numClient, 
+                 int                   numClients, 
+                 chronosClientCache_t *clientCacheP, 
+                 CHRONOS_CACHE_H       chronosCacheH)
 {
-  int i, j;
-  int numSymbols = 0;
-  int numUsers =  0;
-  int numPortfolios = 0;
-  int symbolsPerUser = 0;
-  int random_symbol;
-  int random_user;
-  int random_amount;
+  int   i, j;
+  int   numSymbols = 0;
+  int   numUsers =  0;
+  int   numPortfolios = 0;
+  int   symbolsPerUser = 0;
+  int   random_symbol;
+  int   random_user;
+  int   random_amount;
   float random_price;
 
   if (chronosCacheH == NULL || clientCacheP == NULL) {
@@ -164,9 +186,17 @@ createPortfolios(int numClient, int numClients, chronosClientCache_t *clientCach
     goto failXit;
   }
 
+  /* 
+   * Get the number of symbols and the number of 
+   * users registered in the database.
+   */
   numSymbols = chronosCacheNumSymbolsGet(chronosCacheH);
   numUsers = chronosCacheNumUsersGet(chronosCacheH);
 
+  /*
+   * We will create at most 10 portfolios and each portfolio
+   * handles at most 10 symbols
+   */
   numPortfolios = MAX(MIN(numUsers / numClients, 100), 10);
   symbolsPerUser = MAX(MIN(numSymbols / numUsers, 100), 10);
 
@@ -178,6 +208,7 @@ createPortfolios(int numClient, int numClients, chronosClientCache_t *clientCach
 
   clientCacheP->numPortfolios = numPortfolios;
 
+  /* Create the portfolios. */
   for (i=0; i<numPortfolios; i++) {
     /* TODO: does it matter which client we choose? */
     random_user = (i + (numPortfolios * (numClient -1))) % numUsers;
@@ -186,6 +217,7 @@ createPortfolios(int numClient, int numClients, chronosClientCache_t *clientCach
     clientCacheP->portfoliosArr[i].user = chronosCacheUserGet(random_user, chronosCacheH);
     clientCacheP->portfoliosArr[i].numSymbols = symbolsPerUser;
 
+    /* Assign the symbols to each portfolio */
     for (j=0; j<symbolsPerUser; j++) {
       random_symbol = rand() % chronosCacheNumSymbolsGet(chronosCacheH);
       random_amount = rand() % 100;
@@ -208,8 +240,18 @@ failXit:
   return CHRONOS_FAIL;
 }
 
+
+/*------------------------------------------------------
+ * Create a client cache for client number 'numClient'.
+ * 
+ * A client cache contains a number of portfolios and
+ * each portfolio contains stock information about a 
+ * number of stocks.
+ *----------------------------------------------------*/
 void *
-chronosClientCacheAlloc(int numClient, int numClients, CHRONOS_CACHE_H chronosCacheH)
+chronosClientCacheAlloc(int             numClient, 
+                        int             numClients, 
+                        CHRONOS_CACHE_H chronosCacheH)
 {
   chronosClientCache_t *clientCacheP = NULL;
   int rc = CHRONOS_SUCCESS;
@@ -227,7 +269,10 @@ chronosClientCacheAlloc(int numClient, int numClients, CHRONOS_CACHE_H chronosCa
 
   memset(clientCacheP, 0, sizeof(*clientCacheP));
 
-  rc = createPortfolios(numClient, numClients, clientCacheP, chronosCacheH);
+  rc = createPortfolios(numClient, 
+                        numClients, 
+                        clientCacheP, 
+                        chronosCacheH);
   if (rc != CHRONOS_SUCCESS) {
     chronos_error("Failed to create porfolios cache");
     goto failXit;
@@ -418,6 +463,15 @@ cleanup:
   return rc;
 }
 
+
+/*------------------------------------------------
+ * Create a cache of the list of stocks managed
+ * by the systems. 
+ *
+ * This is achieved by reading the stocks data
+ * file that is initially used to populate the
+ * stocks database.
+ *----------------------------------------------*/
 CHRONOS_CACHE_H
 chronosCacheAlloc(const char *homedir, 
                   const char *datafilesdir)
@@ -434,7 +488,12 @@ chronosCacheAlloc(const char *homedir,
 
   memset(cacheP, 0, sizeof(*cacheP));
 
-  rc = benchmark_stock_list_from_file_get(homedir, datafilesdir, CHRONOS_CLIENT_NUM_STOCKS, &(cacheP->stocksListP));
+  /* Retrieve CHRONOS_CLIENT_NUM_STOCKS symbols
+   * from the datafile */
+  rc = benchmark_stock_list_from_file_get(homedir, 
+                                          datafilesdir, 
+                                          CHRONOS_CLIENT_NUM_STOCKS, 
+                                          &(cacheP->stocksListP));
   if (rc != CHRONOS_SUCCESS) {
     chronos_error("Could not initialize cache structure");
     goto failXit;

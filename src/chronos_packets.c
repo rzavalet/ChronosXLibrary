@@ -18,6 +18,10 @@ const char *chronos_system_transaction_str[] = {
   "CHRONOS_SYS_TXN_UPDATE_STOCK"
 };
 
+/*--------------------------------------------------------
+ * Pack a request for updating the stock price for
+ * the provided symbol.
+ *------------------------------------------------------*/
 static int
 chronosPackUpdateStock(int                         symbolId,
                        const char                 *symbol, 
@@ -258,11 +262,100 @@ cleanup:
   return (void *) reqPacketP;
 }
 
+
+/*---------------------------------------------------------
+ * Create a transaction request for stock price update.
+ * The data items to update are taken from the provided
+ * array of symbol ids.
+ *-------------------------------------------------------*/
 CHRONOS_REQUEST_H
-chronosRequestCreate(unsigned int num_data_items,
+chronosRequestUpdateFromListCreate(unsigned int             num_data_items,
+                                   int                     *data_items_array,
+                                   CHRONOS_CLIENT_CACHE_H   clientCacheH,
+                                   CHRONOS_ENV_H            envH)
+{
+  int i;
+  int rc = CHRONOS_SUCCESS;
+  int symbolIdx = -1;
+  float random_price;
+  const char *symbol = NULL;
+  CHRONOS_CACHE_H         chronosCacheH = NULL;
+  chronosRequestPacket_t *reqPacketP = NULL;
+
+  if (envH == NULL || clientCacheH == NULL) {
+    chronos_error("Invalid argument");
+    goto failXit;
+  }
+
+  chronosCacheH = chronosEnvCacheGet(envH);
+  if (chronosCacheH == NULL) {
+    chronos_error("Invalid cache handle");
+    goto failXit;
+  }
+
+  reqPacketP = malloc(sizeof(chronosRequestPacket_t));
+  if (reqPacketP == NULL) {
+    chronos_error("Could not allocate request structure");
+    goto failXit;
+  }
+
+  memset(reqPacketP, 0, sizeof(*reqPacketP));
+  CHRONOS_REQUEST_MAGIC_SET(reqPacketP);
+  reqPacketP->txn_type = CHRONOS_SYS_TXN_UPDATE_STOCK;
+  reqPacketP->numItems = num_data_items;
+
+  for (i=0; i<num_data_items; i++) {
+    /*--------------------------------------------------
+     * TODO: According to the paper, a server thread
+     * is responsible for refreshing only a certain
+     * chunk of the data items. 
+     *
+     * This code makes the server thread pick a set
+     * of n random data items.
+     *-------------------------------------------------*/
+    chronosUpdateStockInfo_t *updateInfoP = NULL;
+
+    /*
+     * Get the symbol name at index i from the chronos 
+     * cache.
+     */
+    symbolIdx = data_items_array[i];
+    symbol = chronosCacheSymbolGet(symbolIdx, chronosCacheH);
+    assert(symbol != NULL);
+    random_price = 1000;
+
+    updateInfoP = &(reqPacketP->request_data.updateInfo[i]);
+
+    rc = chronosPackUpdateStock(symbolIdx, symbol, random_price, updateInfoP);
+
+    if (rc != CHRONOS_SUCCESS) {
+      chronos_error("Could not pack update request");
+      goto failXit;
+    }
+  }
+  goto cleanup;
+
+failXit:
+  if (reqPacketP != NULL) {
+    free(reqPacketP);
+    reqPacketP = NULL;
+  }
+
+cleanup:
+  return (void *) reqPacketP;
+}
+
+/*---------------------------------------------------------
+ * Create a transaction request of the type specified.
+ * The size of the transaction is determined by 
+ * num_data_items. The data objects are taken from the
+ * client cache.
+ *-------------------------------------------------------*/
+CHRONOS_REQUEST_H
+chronosRequestCreate(unsigned int             num_data_items,
                      chronosUserTransaction_t txnType, 
-                     CHRONOS_CLIENT_CACHE_H  clientCacheH,
-                     CHRONOS_ENV_H envH)
+                     CHRONOS_CLIENT_CACHE_H   clientCacheH,
+                     CHRONOS_ENV_H            envH)
 {
   int i;
   int random_num_data_items = CHRONOS_MIN_DATA_ITEMS_PER_XACT + rand() % (1 + CHRONOS_MAX_DATA_ITEMS_PER_XACT - CHRONOS_MIN_DATA_ITEMS_PER_XACT);
@@ -404,19 +497,30 @@ chronosRequestCreate(unsigned int num_data_items,
       break;
 
     case CHRONOS_SYS_TXN_UPDATE_STOCK:
-      random_symbol = rand() % chronosCacheNumSymbolsGet(chronosCacheH);
+      random_symbol = rand() % chronosCacheNumSymbolsGet(chronosCacheH); // unused
 
-      int j = random_symbol;
       for (i=0; i<random_num_data_items; i++) {
-        // Choose a random symbol
-        //j = (i+random_symbol) % chronosCacheNumSymbolsGet(chronosCacheH);
+        /*--------------------------------------------------
+         * TODO: According to the paper, a server thread
+         * is responsible for refreshing only a certain
+         * chunk of the data items. 
+         *
+         * This code makes the server thread pick a set
+         * of n random data items.
+         *-------------------------------------------------*/
+        chronosUpdateStockInfo_t *updateInfoP = NULL;
 
-        // Now get the symbol
+        /*
+         * Get the symbol name at index i from the chronos 
+         * cache.
+         */
         symbol = chronosCacheSymbolGet(i, chronosCacheH);
+        assert(symbol != NULL);
         random_price = 1000;
 
-        rc = chronosPackUpdateStock(i, symbol, random_price, 
-                                    &(reqPacketP->request_data.updateInfo[i]));
+        updateInfoP = &(reqPacketP->request_data.updateInfo[i]);
+
+        rc = chronosPackUpdateStock(i, symbol, random_price, updateInfoP);
 
         if (rc != CHRONOS_SUCCESS) {
           chronos_error("Could not pack update request");
