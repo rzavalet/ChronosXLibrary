@@ -134,7 +134,7 @@ chronosCacheNumSymbolsGet(CHRONOS_CACHE_H chronosCacheH)
   cacheP = (chronosCache_t *) chronosCacheH;
   CHRONOS_CACHE_MAGIC_CHECK(cacheP);
 
-  return cacheP->numElt;
+  return cacheP->numStocks;
 }
 
 /*-------------------------------------------
@@ -158,11 +158,8 @@ chronosCacheSymbolGet(int             symbolNum,
   if (symbolNum < 0 || symbolNum > cacheP->numStocks) {
     return NULL;
   }
-  else if (cacheP->firstElt + symbolNum < cacheP->firstElt + cacheP->numElt) {
-    return cacheP->stocksListP[cacheP->firstElt + symbolNum];
-  }
   else {
-    return NULL;
+    return cacheP->stocksListP[symbolNum];
   }
 }
 
