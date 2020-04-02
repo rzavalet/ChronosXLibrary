@@ -37,6 +37,9 @@ typedef struct chronosRequestPacket_t {
 typedef void *CHRONOS_REQUEST_H;
 typedef void *CHRONOS_RESPONSE_H;
 
+int
+chronosRequestDump(CHRONOS_REQUEST_H requestH);
+
 CHRONOS_REQUEST_H
 chronosRequestUpdateFromListCreate(unsigned int             num_data_items,
                                    int                     *data_items_array,

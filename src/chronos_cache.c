@@ -6,7 +6,7 @@
 #include "chronos.h"
 #include "include/chronos_cache.h"
 
-#define CHRONOS_CLIENT_NUM_STOCKS     (300)
+#define CHRONOS_CLIENT_NUM_STOCKS     (3000)
 #define CHRONOS_CLIENT_NUM_USERS      (50)
 
 #define MAXLINE   1024
@@ -74,6 +74,8 @@ typedef struct chronosCache_t {
   int                 magic;
 
   int                 numStocks;
+  int                 firstElt;
+  int                 numElt;
   char                **stocksListP;
 
   int                 numUsers;
@@ -84,6 +86,41 @@ typedef struct chronosCache_t {
 #define MIN(a,b)        (a < b ? a : b)
 #define MAX(a,b)        (a > b ? a : b)
 
+
+int
+chronosCacheSymbolsRangeSet(int firstElt, int numElt, CHRONOS_CACHE_H chronosCacheH)
+{
+  int rc = CHRONOS_SUCCESS;
+  chronosCache_t *cacheP= NULL;
+
+  if (chronosCacheH == NULL) {
+    return 0;
+  }
+
+  cacheP = (chronosCache_t *) chronosCacheH;
+  CHRONOS_CACHE_MAGIC_CHECK(cacheP);
+
+  if (firstElt < 0 || firstElt >= cacheP->numStocks) {
+    chronos_error("Invalid range: first: %d, num_stocks: %d", firstElt, cacheP->numStocks);
+    goto failXit;
+  }
+
+  if (numElt <= 0 || firstElt + numElt > cacheP->numStocks) {
+    chronos_error("Invalid range: first: %d, num elements: %d, num_stocks: %d", firstElt, numElt, cacheP->numStocks);
+    goto failXit;
+  }
+
+  cacheP->firstElt = firstElt;
+  cacheP->numElt = numElt;
+
+  goto cleanup;
+
+failXit:
+  rc = CHRONOS_FAIL;
+
+cleanup:
+  return rc;
+}
 
 int
 chronosCacheNumSymbolsGet(CHRONOS_CACHE_H chronosCacheH)
@@ -97,7 +134,7 @@ chronosCacheNumSymbolsGet(CHRONOS_CACHE_H chronosCacheH)
   cacheP = (chronosCache_t *) chronosCacheH;
   CHRONOS_CACHE_MAGIC_CHECK(cacheP);
 
-  return cacheP->numStocks;
+  return cacheP->numElt;
 }
 
 /*-------------------------------------------
@@ -121,8 +158,37 @@ chronosCacheSymbolGet(int             symbolNum,
   if (symbolNum < 0 || symbolNum > cacheP->numStocks) {
     return NULL;
   }
+  else if (cacheP->firstElt + symbolNum < cacheP->firstElt + cacheP->numElt) {
+    return cacheP->stocksListP[cacheP->firstElt + symbolNum];
+  }
+  else {
+    return NULL;
+  }
+}
 
-  return cacheP->stocksListP[symbolNum];
+int
+chronosCacheSymbolIdxGet(int             symbolNum,
+                         CHRONOS_CACHE_H chronosCacheH)
+{
+  chronosCache_t *cacheP= NULL;
+
+  if (chronosCacheH == NULL) {
+    chronos_error("Invalid handle");
+    return -1;
+  }
+
+  cacheP = (chronosCache_t *) chronosCacheH;
+  CHRONOS_CACHE_MAGIC_CHECK(cacheP);
+
+  if (symbolNum < 0 || symbolNum > cacheP->numStocks) {
+    return -1;
+  }
+  else if (cacheP->firstElt + symbolNum < cacheP->firstElt + cacheP->numElt) {
+    return cacheP->firstElt + symbolNum;
+  }
+  else {
+    return -1;
+  }
 }
 
 int
@@ -198,13 +264,15 @@ createPortfolios(int                   numClient,
    * handles at most 10 symbols
    */
   numPortfolios = MAX(MIN(numUsers / numClients, 100), 10);
-  symbolsPerUser = MAX(MIN(numSymbols / numUsers, 100), 10);
+  //symbolsPerUser = MAX(MIN(numSymbols / numUsers, 100), 10);
+  symbolsPerUser = numSymbols / 2;
 
-  fprintf(stderr, "DEBUG: numSymbols: %d, numUsers: %d, numPortfolios: %d, symbolsPerClient: %d\n",
-                  numSymbols,
-                  numUsers,
-                  numPortfolios,
-                  symbolsPerUser);
+  fprintf(stderr, 
+          "DEBUG: numSymbols: %d, numUsers: %d, numPortfolios: %d, symbolsPerClient: %d\n",
+          numSymbols,
+          numUsers,
+          numPortfolios,
+          symbolsPerUser);
 
   clientCacheP->numPortfolios = numPortfolios;
 
@@ -227,10 +295,12 @@ createPortfolios(int                   numClient,
       clientCacheP->portfoliosArr[i].stockInfoArr[j].symbol = chronosCacheSymbolGet(random_symbol, chronosCacheH);
       clientCacheP->portfoliosArr[i].stockInfoArr[j].random_amount = random_amount;
       clientCacheP->portfoliosArr[i].stockInfoArr[j].random_price = random_price;
-      fprintf(stderr, "DEBUG: Client %d Handling user: %s symbol: %s\n",
-                      numClient,
-                      clientCacheP->portfoliosArr[i].user,
-                      clientCacheP->portfoliosArr[i].stockInfoArr[j].symbol);
+      fprintf(stderr, 
+              "DEBUG: Portfolio: %d (Client %d Handling user: %s symbol: %s)\n",
+              i,
+              numClient,
+              clientCacheP->portfoliosArr[i].user,
+              clientCacheP->portfoliosArr[i].stockInfoArr[j].symbol);
     }
   }
 
@@ -502,6 +572,9 @@ chronosCacheAlloc(const char *homedir,
   assert(cacheP->stocksListP != NULL);
 
   cacheP->numStocks = CHRONOS_CLIENT_NUM_STOCKS;
+  cacheP->firstElt = 0;
+  cacheP->numElt = cacheP->numStocks;
+
 
   cacheP->numUsers = CHRONOS_CLIENT_NUM_USERS;
   for (i=0; i<CHRONOS_CLIENT_NUM_USERS; i++) {

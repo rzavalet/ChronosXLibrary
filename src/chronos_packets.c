@@ -345,6 +345,76 @@ cleanup:
   return (void *) reqPacketP;
 }
 
+int
+chronosRequestDump(CHRONOS_REQUEST_H requestH)
+{
+  int i;
+  chronosRequestPacket_t *requestP = NULL;
+
+  if (requestH == NULL) {
+    chronos_error("Invalid handle");
+    goto failXit;
+  }
+
+  requestP = (chronosRequestPacket_t *) requestH;
+
+  fprintf(stderr, "================================================\n");
+  fprintf(stderr, " Txn Type: %s\n", CHRONOS_TXN_NAME(requestP->txn_type));
+  fprintf(stderr, " Txn Size: %d\n", requestP->numItems);
+  fprintf(stderr, "------------------------------------------------\n");
+
+  for (i=0; i<requestP->numItems; i++) {
+    if (i > 0) {
+      fprintf(stderr, "++++++++++++++++++++++++++++++++++++++++++++++++\n");
+    }
+
+    switch (requestP->txn_type) {
+      case CHRONOS_USER_TXN_VIEW_STOCK:
+        fprintf(stderr, "  symbolIdx: %d\n", requestP->request_data.symbolInfo[i].symbolIdx);
+        fprintf(stderr, "  symbolId: %d\n", requestP->request_data.symbolInfo[i].symbolId);
+        fprintf(stderr, "  symbol: %s\n", requestP->request_data.symbolInfo[i].symbol);
+        break;
+
+      case CHRONOS_USER_TXN_VIEW_PORTFOLIO:
+        fprintf(stderr, "  accountId: %s\n", requestP->request_data.portfolioInfo[i].accountId);
+        break;
+
+      case CHRONOS_USER_TXN_PURCHASE:
+        fprintf(stderr, "  accountId: %s\n", requestP->request_data.purchaseInfo[i].accountId);
+        fprintf(stderr, "  symbolId: %d\n", requestP->request_data.purchaseInfo[i].symbolId);
+        fprintf(stderr, "  symbol: %s\n", requestP->request_data.purchaseInfo[i].symbol);
+        fprintf(stderr, "  price: %.2f\n", requestP->request_data.purchaseInfo[i].price);
+        fprintf(stderr, "  amount: %d\n", requestP->request_data.purchaseInfo[i].amount);
+        break;
+
+      case CHRONOS_USER_TXN_SALE:
+        fprintf(stderr, "  accountId: %s\n", requestP->request_data.sellInfo[i].accountId);
+        fprintf(stderr, "  symbolId: %d\n", requestP->request_data.sellInfo[i].symbolId);
+        fprintf(stderr, "  symbol: %s\n", requestP->request_data.sellInfo[i].symbol);
+        fprintf(stderr, "  price: %.2f\n", requestP->request_data.sellInfo[i].price);
+        fprintf(stderr, "  amount: %d\n", requestP->request_data.sellInfo[i].amount);
+        break;
+
+      case CHRONOS_SYS_TXN_UPDATE_STOCK:
+        fprintf(stderr, "  symbolIdx: %d\n", requestP->request_data.updateInfo[i].symbolIdx);
+        fprintf(stderr, "  symbol: %s\n", requestP->request_data.updateInfo[i].symbol);
+        fprintf(stderr, "  price: %.2f\n", requestP->request_data.updateInfo[i].price);
+        break;
+
+      default:
+        fprintf(stderr, "INVALID!\n");
+    }
+  }
+
+  fprintf(stderr, "================================================\n");
+  fprintf(stderr, "\n");
+
+  return CHRONOS_SUCCESS;
+
+failXit:
+  return CHRONOS_FAIL; 
+}
+
 /*---------------------------------------------------------
  * Create a transaction request of the type specified.
  * The size of the transaction is determined by 
@@ -365,6 +435,7 @@ chronosRequestCreate(unsigned int             num_data_items,
   int random_symbol;
   int random_amount;
   float random_price;
+  int symbol_idx = 0;
   const char *symbol;
   const char *user;
   chronosRequestPacket_t *reqPacketP = NULL;
@@ -497,7 +568,6 @@ chronosRequestCreate(unsigned int             num_data_items,
       break;
 
     case CHRONOS_SYS_TXN_UPDATE_STOCK:
-      random_symbol = rand() % chronosCacheNumSymbolsGet(chronosCacheH); // unused
 
       for (i=0; i<random_num_data_items; i++) {
         /*--------------------------------------------------
@@ -514,13 +584,14 @@ chronosRequestCreate(unsigned int             num_data_items,
          * Get the symbol name at index i from the chronos 
          * cache.
          */
+        symbol_idx = chronosCacheSymbolIdxGet(i, chronosCacheH);
         symbol = chronosCacheSymbolGet(i, chronosCacheH);
         assert(symbol != NULL);
         random_price = 1000;
 
         updateInfoP = &(reqPacketP->request_data.updateInfo[i]);
 
-        rc = chronosPackUpdateStock(i, symbol, random_price, updateInfoP);
+        rc = chronosPackUpdateStock(symbol_idx, symbol, random_price, updateInfoP);
 
         if (rc != CHRONOS_SUCCESS) {
           chronos_error("Could not pack update request");

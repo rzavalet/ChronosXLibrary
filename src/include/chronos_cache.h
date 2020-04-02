@@ -15,11 +15,18 @@ int
 chronosCacheFree(CHRONOS_CACHE_H chronosCacheH);
 
 int
+chronosCacheSymbolsRangeSet(int firstElt, int numElt, CHRONOS_CACHE_H chronosCacheH);
+
+int
 chronosCacheNumSymbolsGet(CHRONOS_CACHE_H chronosCacheH);
 
 const char *
 chronosCacheSymbolGet(int symbolNum,
                       CHRONOS_CACHE_H chronosCacheH);
+
+int
+chronosCacheSymbolIdxGet(int             symbolNum,
+                         CHRONOS_CACHE_H chronosCacheH);
 
 int
 chronosCacheNumUsersGet(CHRONOS_CACHE_H chronosCacheH);
