@@ -191,7 +191,7 @@ chronosRequestCreateForClient(int user_idx,
 {
   int i;
   int rc = CHRONOS_SUCCESS;
-  int num_data_items = 0;
+  int num_data_items = CHRONOS_MAX_DATA_ITEMS_PER_XACT;
   int random_user_idx = 0;
   int random_symbol_idx = 0;
   int random_symbol;
@@ -224,7 +224,7 @@ chronosRequestCreateForClient(int user_idx,
 
   // Get user details
   user = chronosClientCacheUserGet(user_idx, clientCacheH);
-  num_data_items = chronosClientCacheNumSymbolFromUserGet(user_idx, clientCacheH);
+  chronosClientCacheNumSymbolFromUserGet(user_idx, clientCacheH);
 
   reqPacketP->txn_type = CHRONOS_USER_TXN_PURCHASE;
   reqPacketP->numItems = (num_data_items > CHRONOS_MAX_DATA_ITEMS_PER_XACT ? CHRONOS_MAX_DATA_ITEMS_PER_XACT : num_data_items);
@@ -481,6 +481,7 @@ chronosRequestCreate(unsigned int             num_data_items,
         // Now get the symbol
         random_symbol = chronosClientCacheSymbolIdFromUserGet(random_user_idx, random_symbol_idx, clientCacheH);
         symbol = chronosClientCacheSymbolFromUserGet(random_user_idx, random_symbol_idx, clientCacheH);
+        //symbol = chronosClientCacheSymbolFromUserGet(random_user_idx, random_symbol, clientCacheH);
         rc = chronosPackViewStock(random_symbol, 
                                    symbol,
                                    &(reqPacketP->request_data.symbolInfo[i]));

@@ -262,14 +262,13 @@ createPortfolios(int                   numClient,
    */
   numPortfolios = MAX(MIN(numUsers / numClients, 100), 10);
   //symbolsPerUser = MAX(MIN(numSymbols / numUsers, 100), 10);
-  symbolsPerUser = numSymbols / 2;
+  symbolsPerUser = 100;
 
-  fprintf(stderr, 
-          "DEBUG: numSymbols: %d, numUsers: %d, numPortfolios: %d, symbolsPerClient: %d\n",
-          numSymbols,
-          numUsers,
-          numPortfolios,
-          symbolsPerUser);
+  chronos_info("DEBUG: numSymbols: %d, numUsers: %d, numPortfolios: %d, symbolsPerClient: %d",
+               numSymbols,
+               numUsers,
+               numPortfolios,
+               symbolsPerUser);
 
   clientCacheP->numPortfolios = numPortfolios;
 
@@ -292,14 +291,17 @@ createPortfolios(int                   numClient,
       clientCacheP->portfoliosArr[i].stockInfoArr[j].symbol = chronosCacheSymbolGet(random_symbol, chronosCacheH);
       clientCacheP->portfoliosArr[i].stockInfoArr[j].random_amount = random_amount;
       clientCacheP->portfoliosArr[i].stockInfoArr[j].random_price = random_price;
-      fprintf(stderr, 
-              "DEBUG: Portfolio: %d (Client %d Handling user: %s symbol: %s)\n",
-              i,
-              numClient,
-              clientCacheP->portfoliosArr[i].user,
-              clientCacheP->portfoliosArr[i].stockInfoArr[j].symbol);
+      chronos_debug(3,
+                    "DEBUG: Portfolio: %d (Client %d Handling user: %s symbol: %s)",
+                    i,
+                    numClient,
+                    clientCacheP->portfoliosArr[i].user,
+                    clientCacheP->portfoliosArr[i].stockInfoArr[j].symbol);
     }
+    chronos_info("   created portfolio for user %d.", random_user);
+
   }
+    chronos_info("Finished creating %d portfolios.", numPortfolios);
 
   return CHRONOS_SUCCESS;
 
