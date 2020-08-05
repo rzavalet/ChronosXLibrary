@@ -5,17 +5,17 @@
 
 typedef void *CHRONOS_ENV_H;
 
-CHRONOS_ENV_H
+extern CHRONOS_ENV_H
 chronosEnvAlloc(const char *homedir, 
                 const char *datafilesdir);
 
-int
+extern int
 chronosEnvFree(CHRONOS_ENV_H envH);
 
-int
+extern int
 chronosEnvCheck(CHRONOS_ENV_H envH);
 
-CHRONOS_CACHE_H
+extern CHRONOS_CACHE_H
 chronosEnvCacheGet(CHRONOS_ENV_H envH);
 #endif
 

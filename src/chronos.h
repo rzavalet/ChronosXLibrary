@@ -24,7 +24,7 @@
 #define CHRONOS_DEBUG_LEVEL_MAX   (10)
 #define CHRONOS_DEBUG_LEVEL_QUEUE (5)
 
-extern int chronos_debug_level;
+int chronos_debug_level;
 
 #define set_chronos_debug_level(_level)  \
   (chronos_debug_level = (_level))
